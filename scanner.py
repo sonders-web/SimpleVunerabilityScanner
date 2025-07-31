@@ -1,5 +1,8 @@
 import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
+# ==================== SQL Injection ====================
 sql_payloads = ["' OR '1'='1", "';--", "\" OR \"1\"=\"1", "' OR 1=1--"]
 
 def test_sql_injection(url):
@@ -25,8 +28,8 @@ def test_sql_injection(url):
             continue
     
     return results
-from bs4 import BeautifulSoup
 
+# ==================== XSS ====================
 xss_payloads = ['<script>alert(1)</script>', '" onmouseover="alert(1)"']
 
 def test_xss_forms(url):
@@ -60,3 +63,38 @@ def test_xss_forms(url):
         pass
 
     return results
+
+# ==================== Open Redirect ====================
+def test_open_redirect(url):
+    results = []
+    if "?" not in url:
+        return results
+
+    payload = "https://evil.com"
+    base, params = url.split("?", 1)
+    test_url = f"{base}?{params}&url={payload}"
+
+    try:
+        r = requests.get(test_url, allow_redirects=False)
+        if "Location" in r.headers and payload in r.headers["Location"]:
+            results.append((test_url, payload))
+    except:
+        pass
+
+    return results
+
+# ==================== Insecure Cookies ====================
+def test_insecure_cookies(url):
+    results = []
+    try:
+        r = requests.get(url, timeout=5)
+        if "set-cookie" in r.headers:
+            cookies = r.headers.get("set-cookie")
+            if "secure" not in cookies.lower() or "httponly" not in cookies.lower():
+                results.append((url, cookies))
+    except:
+        pass
+
+    return results
+
+    report(vulns)
